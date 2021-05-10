@@ -1,9 +1,12 @@
-10.240.0.21   load-balancer    public.example.com
+################# Alt three entries are required ###########
+# Make sure you keep the naming convention on the third column
+# add/remove entries based on "role"-"index"
 
-10.240.0.10    controller-0     c0.example.com
-10.240.0.11    controller-1     c1.kubernetes.local
-...
+# on vagrant up for example, the generated hosts file looks like:
 
-10.240.0.20    worker-0
-10.240.0.21    worker-1         w1.localdomain
-...
+172.16.0.35     load-balancer.kubernetes.local	load-balancer
+172.16.0.10     controller-0.kubernetes.local	controller-0
+172.16.0.11     controller-1.kubernetes.local	controller-1
+172.16.0.20	    worker-0.kubernetes.local	    worker-0
+172.16.0.21	    worker-1.kubernetes.local       worker-1
+

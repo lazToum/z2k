@@ -1,5 +1,9 @@
 #!/bin/bash
 # shellcheck disable=SC2002,SC2029
+set -e
+
+_ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
+if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
 
 # v1.21.0
 kubectl_version="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
@@ -205,7 +209,7 @@ EOFF
 }
 
 function setup_load_balancer() {
-    local controllers_entries; controllers_entries="$(cat /etc/hosts | grep controller | awk '{print "\tserver "$1":6443;"}')"
+    local controllers_entries; controllers_entries="$(cat "${_ETC_HOSTS}" | grep controller | awk '{print "\tserver "$1":6443;"}')"
 cat >"lb.sh" <<EOFF
 #!/bin/bash
 function ensure_command() {
@@ -245,11 +249,11 @@ EOFF
     rm "lb.sh"
 }
 ORIGINAL_IFS=$IFS
-IFS=" " read -r -a _controller_names <<< "$(cat /etc/hosts | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
-IFS=" " read -r -a _controller_ips <<< "$(cat /etc/hosts | grep controller | awk '{print $1}' | xargs)"
-etcd_servers="$(cat /etc/hosts | grep controller | awk '{print "https://"$1":2379"}' | xargs | sed -e "s/[[:space:]]/,/g")"
+IFS=" " read -r -a _controller_names <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a _controller_ips <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $1}' | xargs)"
+etcd_servers="$(cat "${_ETC_HOSTS}" | grep controller | awk '{print "https://"$1":2379"}' | xargs | sed -e "s/[[:space:]]/,/g")"
 servers_count="${#_controller_names[@]}"
-load_balancer="$(cat /etc/hosts | grep balancer | tail -1 | awk '{print $1}')"
+load_balancer="$(cat "${_ETC_HOSTS}" | grep balancer | tail -1 | awk '{print $1}')"
 for i in "${!_controller_names[@]}"; do
     _controller="${_controller_names[$i]}"
     _ip="${_controller_ips[$i]}"

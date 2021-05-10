@@ -1,9 +1,11 @@
 #!/bin/bash
 # shellcheck disable=SC2002,SC2086
+set -e
 
-# set -xe
+_ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
+if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
 
-LOAD_BALANCER_IP="$(cat /etc/hosts | grep balancer | tail -1 | awk '{print $1}')"
+LOAD_BALANCER_IP="$(cat "${_ETC_HOSTS}" | grep balancer | tail -1 | awk '{print $1}')"
 CLUSTER_NAME=kubernetes-the-hard-way
 ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
 
@@ -49,7 +51,7 @@ EOF
 
 function to_controllers() {
   local _controllers
-  IFS=" " read -r -a _controllers <<< "$(cat /etc/hosts | grep controller | awk '{print $1}' | xargs)"
+  IFS=" " read -r -a _controllers <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $1}' | xargs)"
   for _controller in "${_controllers[@]}"; do
     scp  -o StrictHostKeyChecking=no admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig encryption-config.yaml "${_controller}":~/
   done
@@ -57,14 +59,14 @@ function to_controllers() {
 
 function to_workers() {
   local _workers
-  IFS=" " read -r -a _workers <<< "$(cat /etc/hosts | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
+  IFS=" " read -r -a _workers <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
   for _worker in "${_workers[@]}"; do
     scp -o StrictHostKeyChecking=no ca.pem "${_worker}.kubeconfig" kube-proxy.kubeconfig "${_worker}":~/
   done
 }
 
 function main() {
-  IFS=" " read -r -a _workers <<< "$(cat /etc/hosts | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
+  IFS=" " read -r -a _workers <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
   for _worker in "${_workers[@]}"; do
     make_config "${_worker}" "system:node:${_worker}" "${LOAD_BALANCER_IP}"
   done

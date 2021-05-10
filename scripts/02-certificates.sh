@@ -1,7 +1,10 @@
 #!/bin/bash
 # shellcheck disable=SC2002
+set -e
 
-# set -xe
+_ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
+if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
+
 # override if needed with env vars:
 _COUNTRY="${CERT_COUNTRY:-US}"
 _CITY="${CERT_CITY:-Portland}"
@@ -98,7 +101,7 @@ function get_remote_ips() {
 }
 
 function make_worker_certs() {
-  IFS=" " read -r -a _workers <<< "$(cat /etc/hosts | grep worker | awk '{print $2}' | xargs)"
+  IFS=" " read -r -a _workers <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | xargs)"
   for i in "${!WORKERS[@]}"; do
     __worker="${WORKERS[$i]}"
     __host="${_workers[$i]}"
@@ -110,9 +113,9 @@ function make_worker_certs() {
 function get_kube_hostnames_and_ips() {
   __common="10.32.0.1,127.0.0.1,localhost,kubernetes.default"
   __me="$(ip --brief address | grep -v lo | awk '{print $3}' | cut -d/ -f1 | xargs | sed 's/ /,/g')"
-  __controller_hosts="$(cat /etc/hosts | grep controller | xargs | sed -e "s/[[:space:]]/,/g")"
-  __worker_hosts="$(cat /etc/hosts | grep worker | xargs | sed -e "s/[[:space:]]/,/g")"
-  __load_balancer_hosts="$(cat /etc/hosts | grep balancer | xargs | sed -e "s/[[:space:]]/,/g")"
+  __controller_hosts="$(cat "${_ETC_HOSTS}"  | grep controller | xargs | sed -e "s/[[:space:]]/,/g")"
+  __worker_hosts="$(cat "${_ETC_HOSTS}"  | grep worker | xargs | sed -e "s/[[:space:]]/,/g")"
+  __load_balancer_hosts="$(cat "${_ETC_HOSTS}"  | grep balancer | xargs | sed -e "s/[[:space:]]/,/g")"
   __load_balancer="$(echo "$__load_balancer_hosts" | cut -d, -f1)"
   __lb_ips="$(get_remote_ips "${__load_balancer}")"
   echo "${__common},${__me},$(hostname -s),${__controller_hosts},${CONTROLLER_IPS},${__worker_hosts},${WORKER_IPS},${__load_balancer_hosts},${__lb_ips}"
@@ -159,8 +162,8 @@ function main() {
 ORIGINAL_IFS=$IFS
 rm -rf certs && mkdir -p certs && cd certs || exit 1
 ensure_command ip iproute2 iproute
-IFS=" " read -r -a CONTROLLERS <<< "$(cat /etc/hosts | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
-IFS=" " read -r -a WORKERS <<< "$(cat /etc/hosts | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a CONTROLLERS <<< "$(cat "${_ETC_HOSTS}"  | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a WORKERS <<< "$(cat "${_ETC_HOSTS}"  | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
 WORKER_IPS=""
 for _w in "${WORKERS[@]}"; do
   WORKER_IPS="$(get_remote_ips "${_w}"),${WORKER_IPS}"

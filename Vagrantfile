@@ -5,7 +5,8 @@ CONTROLLER_NODES = Integer(ENV['CONTROLLER_NODES'] || 2)
 WORKER_NODES = Integer(ENV['WORKER_NODES'] || 2)
 
 # change them to < 1024 ?
-# in libvirt 80 && 443 are working (we are asked for sudo paassword on "up")
+# in libvirt 80 && 443 are working (we are asked for sudo password on "up")
+# TODO: if othe ports are used, pass them to the load-blanacer so that it 'listens' to them
 LB_PORTS = [
   { "guest" => 80, "host" => 80 },
   { "guest" => 443, "host" => 443 },
@@ -21,6 +22,9 @@ CLIENT_CPUS = Integer(ENV["CLIENT_CPUS"] || 1)
 CLIENT_MEMORY = Integer(ENV["CLIENT_MEMORY"] || 512)
 LB_CPUS = Integer(ENV["LB_CPUS"] || 1)
 LB_MEMORY = Integer(ENV["LB_MEMORY"] || 512)
+
+EXCLUDE_CLIENT = ENV["EXCLUDE_CLIENT"] || "false"
+SKIP_PROVISION = ENV["SKIP_PROVISION"] || "false"
 
 ## ips
 IPS_PREFIX = ENV["IPS_PREFIX"] || "172.16.0."
@@ -153,36 +157,42 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         worker.vm.provision "shell", privileged: false, inline: $before
       end
   end
-  ## this one could be skipped,
-  ## if we wish to install the required client tools (kubectl, ...) on the vagrant host
-  config.vm.define "client", primary: true do |client|
-    client.vm.network "private_network", ip: IPS_PREFIX + "#{CLIENT_IP_SUFFIX}", netmask: NETMASK, hostname: true
-    client.vm.hostname = "client.kubernetes.local"
-    client.vm.provider "virtualbox" do |vbox|
-      vbox.name  = "client"
-      vbox.cpus = CLIENT_CPUS
-      vbox.memory = CLIENT_MEMORY
+
+  if EXCLUDE_CLIENT.eql?("false")
+    ## this one could be skipped,
+    ## if we wish to install the required client tools (kubectl, ...) on the vagrant host
+    # and run "provision" scripts either manually or with z2k.sh
+    config.vm.define "client", primary: true do |client|
+      client.vm.network "private_network", ip: IPS_PREFIX + "#{CLIENT_IP_SUFFIX}", netmask: NETMASK, hostname: true
+      client.vm.hostname = "client.kubernetes.local"
+      client.vm.provider "virtualbox" do |vbox|
+        vbox.name  = "client"
+        vbox.cpus = CLIENT_CPUS
+        vbox.memory = CLIENT_MEMORY
+      end
+      client.vm.provider "libvirt" do |libvirt|
+        libvirt.cpus = CLIENT_CPUS
+        libvirt.memory = CLIENT_MEMORY
+      end
+      if SKIP_PROVISION.eql?("false")
+        if File.exist?('.env')
+          client.vm.provision "file",
+          source: ".env",
+          destination: "/home/vagrant/.env",
+          preserve_order: true
+        end
+        client.vm.provision "file",
+          source: "scripts/",
+          destination: "/home/vagrant/",
+          preserve_order: true
+        client.vm.provision "shell",
+          env: PROVISION_ENV,
+          path: "vagrant.sh",
+          args: "#{IPS_PREFIX}" + "#{CLIENT_IP_SUFFIX}",
+          privileged: false,
+          preserve_order: true
+        end
     end
-    client.vm.provider "libvirt" do |libvirt|
-      libvirt.cpus = CLIENT_CPUS
-      libvirt.memory = CLIENT_MEMORY
-    end
-    if File.exist?('.env')
-      client.vm.provision "file",
-      source: ".env",
-      destination: "/home/vagrant/.env",
-      preserve_order: true
-    end
-    client.vm.provision "file",
-      source: "scripts/",
-      destination: "/home/vagrant/",
-      preserve_order: true
-    client.vm.provision "shell",
-      env: PROVISION_ENV,
-      path: "vagrant.sh",
-      args: "#{IPS_PREFIX}" + "#{CLIENT_IP_SUFFIX}",
-      privileged: false,
-      preserve_order: true
   end
   ############## definitions end ####################
 end

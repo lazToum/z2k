@@ -1,25 +1,40 @@
+# Make sure you keep the naming convention
+# Host "role"-"index"
+
+# Add the path of `pwd`/ssh.conf to ~/.ssh/config, sth like:
+# `echo "Include $(pwd)/ssh.conf" >  ~/.ssh/config`
+
 Host load-balancer
-    Hostname x.x.x.x
-    User user
-    IdentityFile ~/.ssh/id_rsa
-
-Host worker-0
-    Hostname example.com
-    User example
-    Port 6633
-    IdentityFile /path/to/private.key
-
-Host worker-1
-    Hostname x.x.x.x
-    User user
-    IdentityFile ~/.ssh/id_rsa
+    Hostname 172.16.0.35
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    User vagrant
+    IdentityFile ~/.vagrant.d/insecure_private_key
 
 Host controller-0
-    Hostname x.x.x.x
-    User user
-    IdentityFile ~/.ssh/id_rsa
+    Hostname 172.16.0.10
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    User vagrant
+    IdentityFile ~/.vagrant.d/insecure_private_key
 
 Host controller-1
-    Hostname x.x.x.x
-    User user
-    IdentityFile ~/.ssh/id_rsa
+    Hostname 172.16.0.11
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    User vagrant
+    IdentityFile ~/.vagrant.d/insecure_private_key
+
+Host worker-0
+    Hostname 172.16.0.20
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    User vagrant
+    IdentityFile ~/.vagrant.d/insecure_private_key
+
+Host worker-1
+    Hostname 172.16.0.21
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null
+    User vagrant
+    IdentityFile ~/.vagrant.d/insecure_private_key

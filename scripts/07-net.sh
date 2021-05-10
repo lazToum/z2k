@@ -1,7 +1,11 @@
 #!/bin/bash
 # shellcheck disable=SC2002,SC2029
+set -e
 
-load_balancer="$(cat /etc/hosts | grep balancer | tail -1 | awk '{print $1}')"
+_ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
+if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
+
+load_balancer="$(cat "${_ETC_HOSTS}" | grep balancer | tail -1 | awk '{print $1}')"
 
 # v1.21.0
 kubectl_version="$(curl -L -s https://dl.k8s.io/release/stable.txt)"

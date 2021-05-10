@@ -1,7 +1,11 @@
 #!/bin/bash
 # shellcheck disable=SC2002,SC2029
+set -e
 
-load_balancer="$(cat /etc/hosts | grep balancer | tail -1 | awk '{print $1}')"
+_ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
+if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
+
+load_balancer="$(cat "${_ETC_HOSTS}" | grep balancer | tail -1 | awk '{print $1}')"
 
 # optional: get a certbot certificate on load balancer
 _domain_name=${DOMAIN_NAME:-localhost}
@@ -122,4 +126,4 @@ echo "you might be able to login on \"https://${_domain_name}\""
 echo "using the token:"
 echo "${_dashboard_token}" > .dashboard_token
 echo "${_dashboard_token}"
-echo "you may also wish to copy it: ($(pwd)/.dashboard_token)"
+echo "also saved here: ($(pwd)/.dashboard_token)"

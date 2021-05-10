@@ -1,5 +1,9 @@
 #!/bin/bash
 # shellcheck disable=SC2002,SC2029
+set -e
+
+_ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
+if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
 
 # v1.21.0
 kubectl_version="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
@@ -17,7 +21,7 @@ function make_setup_script() {
     local _hostname="${2}"
     cat >"${_name}" <<EOFF
 if command -v apt &> /dev/null; then
-    sudo apt update && sudo apt install -y socat conntrack ipset wget systemctl kmod btrfs-progs libbtrfs-dev
+    sudo apt update && sudo apt install -y socat conntrack ipset wget systemd kmod btrfs-progs
 elif command -v dnf &> /dev/null; then
     sudo dnf install install -y socat conntrack ipset wget systemd kmod btrfs-progs-devel
 elif command -v yum &> /dev/null; then
@@ -33,7 +37,7 @@ if [ -f admin.kubeconfig ];then
   fi
 fi
 sudo sysctl net.ipv4.ip_forward=1
-if [ ! "\$(sysctl net.ipv4.ip_forward= 1 | cut -d= -f2 | tr -d " " 2>/dev/null || echo 0)" = "1" ];then 
+if [ ! "\$(sysctl net.ipv4.ip_forward | cut -d= -f2 | tr -d " " 2>/dev/null || echo 0)" = "1" ];then
     echo 'sysctl net.ipv4.ip_forward=1' | sudo tee -a /etc/sysctl.conf
 fi
 sudo swapoff -a &>/dev/null
@@ -71,7 +75,7 @@ mkdir containerd
   tar -xvf "containerd-${containerd_version}-linux-amd64.tar.gz" -C containerd
   sudo tar -xvf "cni-plugins-linux-amd64-v${cni_plugins_version}.tgz" -C /opt/cni/bin/
   sudo mv runc.amd64 runc
-  chmod +x crictl kubectl kube-proxy kubelet runc 
+  chmod +x crictl kubectl kube-proxy kubelet runc
   sudo mv crictl kubectl kube-proxy kubelet runc /usr/local/bin/
   sudo mv containerd/bin/* /bin/
   rm "crictl-v${cri_tools_version}-linux-amd64.tar.gz" "containerd-${containerd_version}-linux-amd64.tar.gz" "cni-plugins-linux-amd64-v${cni_plugins_version}.tgz" &>/dev/null
@@ -201,7 +205,7 @@ EOFF
 }
 
 ORIGINAL_IFS=$IFS
-IFS=" " read -r -a _worker_names <<< "$(cat /etc/hosts | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a _worker_names <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
 for i in "${!_worker_names[@]}"; do
     _worker="${_worker_names[i]}"
     make_setup_script "setup-${_worker}.sh" "${_worker}"
@@ -211,5 +215,5 @@ for i in "${!_worker_names[@]}"; do
 done
 IFS=$ORIGINAL_IFS
 sleep 5
-a_controller="$(cat /etc/hosts | grep controller | tail -1 | awk '{ print $1 }')"
+a_controller="$(cat "${_ETC_HOSTS}" | grep controller | tail -1 | awk '{ print $1 }')"
 ssh "${a_controller}" "kubectl get nodes"

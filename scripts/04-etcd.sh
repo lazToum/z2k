@@ -1,5 +1,9 @@
 #!/bin/bash
 # shellcheck disable=SC2002,SC2029
+set -e
+
+_ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
+if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
 
 ETCD_VER=v3.4.15
 
@@ -63,21 +67,21 @@ WantedBy=multi-user.target
 EOF
 sudo systemctl daemon-reload
 sudo systemctl enable etcd
-sudo systemctl start etcd &>/dev/null
+sudo systemctl start etcd &>/dev/null || :
 sleep 5
-sudo systemctl restart etcd &>/dev/null
+sudo systemctl restart etcd &>/dev/null || :
 sudo ETCDCTL_API=3 etcdctl member list \
     --endpoints=https://127.0.0.1:2379 \
     --cacert=/etc/etcd/ca.pem \
     --cert=/etc/etcd/kubernetes.pem \
-    --key=/etc/etcd/kubernetes-key.pem 2> /dev/null
+    --key=/etc/etcd/kubernetes-key.pem 2> /dev/null || :
 EOFF
 
 }
 ORIGINAL_IFS=$IFS
-IFS=" " read -r -a _controller_names <<< "$(cat /etc/hosts | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
-IFS=" " read -r -a _controller_ips <<< "$(cat /etc/hosts | grep controller | awk '{print $1}' | xargs)"
-initial_cluster="$(cat /etc/hosts | grep controller | awk '{print $3"=https://"$1":2380"}' | xargs | sed -e "s/[[:space:]]/,/g")"
+IFS=" " read -r -a _controller_names <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a _controller_ips <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $1}' | xargs)"
+initial_cluster="$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $3"=https://"$1":2380"}' | xargs | sed -e "s/[[:space:]]/,/g")"
 for i in "${!_controller_names[@]}"; do
     _controller="${_controller_names[$i]}"
     _ip="${_controller_ips[$i]}"
