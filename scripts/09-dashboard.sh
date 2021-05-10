@@ -102,6 +102,7 @@ server {
 EOF
 sudo nginx -t
 sudo systemctl start kube-dashboard nginx
+sudo systemctl status kube-dashboard nginx
 EOFF
 }
 scp lb.sh "${load_balancer}":~/ && ssh "${load_balancer}" bash lb.sh
