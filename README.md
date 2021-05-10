@@ -29,7 +29,7 @@ Requirements:
 - [03- Configurations](docs/03-configs.md)
 - ...
 
-### Scripts [./scripts](./sctipts)
+### Scripts [./scripts](./scripts)
 
 - [./scripts/01-tools.sh](./scripts/01-tools.sh)
 - [./scripts/02-certificates.sh](./scripts/02-certificates.sh)
