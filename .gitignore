@@ -1,0 +1,6 @@
+.vagrant
+.idea
+.vscode
+.env
+*.log
+*.conf

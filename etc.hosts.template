@@ -1,0 +1,9 @@
+10.240.0.21   load-balancer    public.example.com
+
+10.240.0.10    controller-0     c0.example.com
+10.240.0.11    controller-1     c1.kubernetes.local
+...
+
+10.240.0.20    worker-0
+10.240.0.21    worker-1         w1.localdomain
+...

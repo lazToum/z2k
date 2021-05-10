@@ -1,0 +1,25 @@
+Host load-balancer
+    Hostname x.x.x.x
+    User user
+    IdentityFile ~/.ssh/id_rsa
+
+Host worker-0
+    Hostname example.com
+    User example
+    Port 6633
+    IdentityFile /path/to/private.key
+
+Host worker-1
+    Hostname x.x.x.x
+    User user
+    IdentityFile ~/.ssh/id_rsa
+
+Host controller-0
+    Hostname x.x.x.x
+    User user
+    IdentityFile ~/.ssh/id_rsa
+
+Host controller-1
+    Hostname x.x.x.x
+    User user
+    IdentityFile ~/.ssh/id_rsa
