@@ -165,7 +165,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     end
     client.vm.provider "libvirt" do |libvirt|
       libvirt.cpus = CLIENT_CPUS
-      ibvirt.memory = CLIENT_CPUS
+      ibvirt.memory = CLIENT_MEMORY
     end
     if File.exist?('.env')
       client.vm.provision "file",
