@@ -60,11 +60,11 @@ function copy_my_id() {
     ssh "vagrant@${1}" "sudo sed -i -E 's/^#?PasswordAuthentication yes.*/PasswordAuthentication no/g' /etc/ssh/sshd_config && if command -v systemctl &> /dev/null; then sudo systemctl restart ssh; elif [ -f /etc/init.d/ssh ]; then sudo /etc/init.d/ssh restart; else sudo kill -HUP \$(cat /var/run/sshd.pid);fi"
 }
 
-my_ssh () {   
-  if [ -f /home/vagrant/.ssh/id_rsa ]; then 
+my_ssh () {
+  if [ -f /home/vagrant/.ssh/id_rsa ]; then
       rm /home/vagrant/.ssh/id_rsa
   fi
-  if [ -f /home/vagrant/.ssh/id_rsa.pub ]; then 
+  if [ -f /home/vagrant/.ssh/id_rsa.pub ]; then
       rm /home/vagrant/.ssh/id_rsa.pub
   fi
   ssh-keygen -f /home/vagrant/.ssh/id_rsa -t rsa -q -N ''

@@ -7,7 +7,7 @@ load_balancer="$(cat /etc/hosts | grep balancer | tail -1 | awk '{print $1}')"
 kubectl_version="$(curl -L -s https://dl.k8s.io/release/stable.txt)"
 cat >lb.sh <<EOFF
 #!/bin/bash
-if [ ! "\$(sysctl net.ipv4.ip_forward | cut -d= -f2 | tr -d " " 2>/dev/null || echo 0)" = "1" ];then 
+if [ ! "\$(sysctl net.ipv4.ip_forward | cut -d= -f2 | tr -d " " 2>/dev/null || echo 0)" = "1" ];then
     echo 'sysctl net.ipv4.ip_forward=1' | sudo tee -a /etc/sysctl.conf
 fi
 sudo sysctl net.ipv4.ip_forward=1
@@ -82,7 +82,7 @@ metadata:
     app: busybox
 spec:
   replicas: 1
-  strategy: 
+  strategy:
     type: RollingUpdate
   selector:
     matchLabels:
@@ -95,7 +95,7 @@ spec:
       containers:
       - name: busybox
         image: yauritux/busybox-curl
-        imagePullPolicy: IfNotPresent  
+        imagePullPolicy: IfNotPresent
         command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
 EOF
 echo "sleeping for a while...."
@@ -116,7 +116,7 @@ kubectl exec "\${pod_name}" -- curl -m 10 -I "\${nginx_three}"
 kubectl exec "\${pod_name}" -- curl -m 10 -I "\${nginx_svc}"
 echo "test ccoredns"
 kubectl exec -ti \$pod_name -- nslookup kubernetes
-# let's keep them, and cleaup later from the dashboard ui
+# let's keep them, and cleanup later from the dashboard ui
 # kubectl delete deployment busybox
 # kubectl delete deployment nginx
 # kubectl delete svc nginx

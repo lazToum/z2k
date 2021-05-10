@@ -9,7 +9,7 @@ function make_setup_script() {
     local _servers_count="${2}"
     local _internal_ip="${3}"
     local _external_ip="${4}"
-    local _etcd_serers="${5}"
+    local _etcd_servers="${5}"
     cat >"${_name}" <<EOFF
 #!/bin/bash
 function ensure_command() {
@@ -66,7 +66,7 @@ ExecStart=/usr/local/bin/kube-apiserver \\
   --etcd-cafile=/var/lib/kubernetes/ca.pem \\
   --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \\
   --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \\
-  --etcd-servers=${_etcd_serers} \\
+  --etcd-servers=${_etcd_servers} \\
   --event-ttl=1h \\
   --encryption-provider-config=/var/lib/kubernetes/encryption-config.yaml \\
   --kubelet-certificate-authority=/var/lib/kubernetes/ca.pem \\

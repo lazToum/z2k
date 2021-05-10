@@ -50,7 +50,7 @@ chmod +x dashboard.sh
 
 cat <<EOF | sudo tee /etc/systemd/system/kube-dashboard.service
 [Unit]
-Description=Kubernetes Dashboard port fortwrading
+Description=Kubernetes Dashboard port forwarding
 Documentation=https://github.com/kubernetes/kubernetes
 
 [Service]

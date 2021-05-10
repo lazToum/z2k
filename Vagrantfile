@@ -31,7 +31,7 @@ WORKERS_IP_START = Integer(ENV["WORKERS_IP_START"] || 20)
 LB_IP_SUFFIX = CONTROLLERS_IP_START + CONTROLLER_NODES + WORKERS_IP_START + WORKER_NODES + 1
 CLIENT_IP_SUFFIX = LB_IP_SUFFIX + 1
 
-## if not localhost, we can get a letsenrypt cert on lb
+## if not localhost, we can get a certbot cert on lb
 DOMAIN_NAME = ENV["DOMAIN_NAME"] || "localhost"
 
 ## images
@@ -60,7 +60,7 @@ $before = <<SHELL
   fi
   ssh-keygen -f /home/vagrant/.ssh/id_rsa -t rsa -q -N ''
   cat > ~/.ssh/config <<EOF
-Host 10.*
+Host #{IPS_PREFIX}*
   StrictHostKeyChecking no
   UserKnownHostsFile=/dev/null
 EOF
@@ -83,7 +83,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # we handle /etc/hosts
     config.hostmanager.enabled = false
   end
-  
+
   config.vm.box_check_update = false
   if Vagrant.has_plugin?("vagrant-vbguest")
     config.vbguest.auto_update = true
@@ -144,7 +144,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         worker.vm.provider "virtualbox" do |vbox|
           vbox.name = "worker-#{i}"
           vbox.memory = MEMORY_PER_WORKER
-          vbox.cpus = CPUS_PER_WORKER         
+          vbox.cpus = CPUS_PER_WORKER
         end
         worker.vm.provider "libvirt" do |libvirt|
           libvirt.cpus = CPUS_PER_WORKER
@@ -153,7 +153,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         worker.vm.provision "shell", privileged: false, inline: $before
       end
   end
-  ## this one could be skipped, 
+  ## this one could be skipped,
   ## if we wish to install the required client tools (kubectl, ...) on the vagrant host
   config.vm.define "client", primary: true do |client|
     client.vm.network "private_network", ip: IPS_PREFIX + "#{CLIENT_IP_SUFFIX}", netmask: NETMASK, hostname: true
@@ -165,7 +165,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     end
     client.vm.provider "libvirt" do |libvirt|
     end
-    if(File.exist?('.env'))
+    if File.exist?('.env')
       client.vm.provision "file",
       source: ".env",
       destination: "/home/vagrant/.env",

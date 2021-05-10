@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2002
+# shellcheck disable=SC2002,SC2086
 
 # set -xe
 
@@ -16,13 +16,13 @@ function make_config() {
     --embed-certs=true \
     --server=https://${_server}:6443 \
     --kubeconfig="${_name}.kubeconfig"
-  
+
   kubectl config set-credentials "${_user}" \
     --client-certificate="${_name}.pem" \
     --client-key="${_name}-key.pem" \
     --embed-certs=true \
     --kubeconfig="${_name}.kubeconfig"
-  
+
   kubectl config set-context default \
     --cluster="${CLUSTER_NAME}" \
     --user="${_user}" \
