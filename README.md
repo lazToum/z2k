@@ -1,6 +1,6 @@
 # Zero to Kubernetes
 
-Generate a kubernetes cluster without/before using gcloud/ews or other cloud providers.
+Generate a kubernetes cluster without/before using gcloud/aws or other cloud providers.
 
 For educational purposes only, not ment to be used on production.
 
