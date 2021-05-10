@@ -8,7 +8,7 @@ Based on (all credits to) [https://github.com/kelseyhightower/kubernetes-the-har
 
 ## Extra
 
-Ooptioanlly, also install and proxy the [Kubernetes Dashboard](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/), and add use a certbot certificate on the load balancer.
+Optioanlly, also install and proxy the [Kubernetes Dashboard](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/), and add use a certbot certificate on the load balancer.
 
 A two controllers and two workers deployment output:
 !["dashboard](./docs/dashboard.png "dashboard")
