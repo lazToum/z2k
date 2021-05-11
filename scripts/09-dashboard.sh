@@ -2,15 +2,19 @@
 # shellcheck disable=SC2002,SC2029
 set -e
 
-_ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
-if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
+INCLUDE_DASHBOARD="${INCLUDE_DASHBOARD:-false}"
 
-load_balancer="$(cat "${_ETC_HOSTS}" | grep balancer | tail -1 | awk '{print $1}')"
+if [ "${INCLUDE_DASHBOARD}" = "true" ]; then
 
-# optional: get a certbot certificate on load balancer
-_domain_name=${DOMAIN_NAME:-localhost}
+  _ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
+  if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
 
-cat >lb.sh <<EOFF
+  load_balancer="$(cat "${_ETC_HOSTS}" | grep balancer | tail -1 | awk '{print $1}')"
+
+  # optional: get a certbot certificate on load balancer
+  _domain_name=${DOMAIN_NAME:-localhost}
+
+  cat >lb.sh <<EOFF
 #!/bin/bash
 kubectl get nodes
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml
@@ -79,8 +83,8 @@ systemctl status kube-dashboard
 sudo systemctl restart nginx
 EOFF
 
-function make_certbot() {
-  cat >certbot.sh <<EOFF
+  function make_certbot() {
+    cat >certbot.sh <<EOFF
 sudo snap install core && sudo snap refresh core
 sudo snap install --classic certbot
 sudo ln -s /snap/bin/certbot /usr/bin/certbot
@@ -108,22 +112,23 @@ sudo nginx -t
 sudo systemctl start kube-dashboard nginx
 sudo systemctl status kube-dashboard nginx
 EOFF
-}
-scp lb.sh "${load_balancer}":~/ && ssh "${load_balancer}" bash lb.sh
-ssh "${load_balancer}" rm lb.sh
-rm lb.sh
+  }
+  scp lb.sh "${load_balancer}":~/ && ssh "${load_balancer}" bash lb.sh
+  ssh "${load_balancer}" rm lb.sh
+  rm lb.sh
 
-if [ ! "${_domain_name}" = "localhost" ] && [ ! "${_domain_name}" = "" ]; then
-  make_certbot
-  scp certbot.sh "${load_balancer}":~/ && ssh "${load_balancer}" bash certbot.sh
-  ssh "${load_balancer}" rm certbot.sh
-  rm certbot.sh
+  if [ ! "${_domain_name}" = "localhost" ] && [ ! "${_domain_name}" = "" ]; then
+    make_certbot
+    scp certbot.sh "${load_balancer}":~/ && ssh "${load_balancer}" bash certbot.sh
+    ssh "${load_balancer}" rm certbot.sh
+    rm certbot.sh
+  fi
+  _dashboard_token="$(ssh -o StrictHostKeyChecking=no load-balancer cat .dashboard_token)"
+  ssh "${load_balancer}" rm .dashboard_token
+
+  echo "you might be able to login on \"https://${_domain_name}\""
+  echo "using the token:"
+  echo "${_dashboard_token}" > .dashboard_token
+  echo "${_dashboard_token}"
+  echo "also saved here: ($(pwd)/.dashboard_token)"
 fi
-_dashboard_token="$(ssh -o StrictHostKeyChecking=no load-balancer cat .dashboard_token)"
-ssh "${load_balancer}" rm .dashboard_token
-
-echo "you might be able to login on \"https://${_domain_name}\""
-echo "using the token:"
-echo "${_dashboard_token}" > .dashboard_token
-echo "${_dashboard_token}"
-echo "also saved here: ($(pwd)/.dashboard_token)"

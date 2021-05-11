@@ -11,6 +11,7 @@ function read_env() {
     CONTROLLERS_IP_START="${CONTROLLERS_IP_START:-}"
     WORKERS_IP_START="${WORKERS_IP_START:-}"
     export DOMAIN_NAME="${DOMAIN_NAME:-localhost}"
+    export INCLUDE_DASHBOARD="${INCLUDE_DASHBOARD:-false}"
     if [ ! "${DOMAIN_NAME}" = "localhost" ]; then
         export FQDN="${DOMAIN_NAME}"
     fi

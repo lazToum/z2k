@@ -4,7 +4,7 @@ set -e
 
 _ETC_HOSTS="${ETC_HOSTS:-/etc/hosts}"
 if [ ! -f "${_ETC_HOSTS}" ];then _ETC_HOSTS=/etc/hosts; fi
-
+INCLUDE_DASHBOARD="${INCLUDE_DASHBOARD:-false}"
 load_balancer="$(cat "${_ETC_HOSTS}" | grep balancer | tail -1 | awk '{print $1}')"
 
 # v1.21.0
@@ -120,11 +120,12 @@ kubectl exec "\${pod_name}" -- curl -m 10 -I "\${nginx_three}"
 kubectl exec "\${pod_name}" -- curl -m 10 -I "\${nginx_svc}"
 echo "test ccoredns"
 kubectl exec -ti \$pod_name -- nslookup kubernetes
-# let's keep them, and cleanup later from the dashboard ui
-# kubectl delete deployment busybox
-# kubectl delete deployment nginx
-# kubectl delete svc nginx
-
+if [ "${INCLUDE_DASHBOARD}" = "false" ]; then
+  echo "cleanup..."
+  kubectl delete deployment busybox
+  kubectl delete deployment nginx
+  kubectl delete svc nginx
+fi
 EOFF
 
 scp lb.sh certs/ca.pem certs/ca-key.pem certs/admin.pem certs/admin-key.pem "${load_balancer}":~/ && ssh "${load_balancer}" bash lb.sh
