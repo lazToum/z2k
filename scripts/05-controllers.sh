@@ -259,7 +259,7 @@ EOFF
     rm "lb.sh"
 }
 ORIGINAL_IFS=$IFS
-IFS=" " read -r -a _controller_names <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a _controller_names <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $2}' | xargs)"
 IFS=" " read -r -a _controller_ips <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $1}' | xargs)"
 etcd_servers="$(cat "${_ETC_HOSTS}" | grep controller | awk '{print "https://"$1":2379"}' | xargs | sed -e "s/[[:space:]]/,/g")"
 servers_count="${#_controller_names[@]}"
@@ -268,8 +268,7 @@ for i in "${!_controller_names[@]}"; do
     _controller="${_controller_names[$i]}"
     _ip="${_controller_ips[$i]}"
     make_setup_script "setup-${_controller}.sh" "${servers_count}" "${_ip}" "${load_balancer}" "${etcd_servers}"
-    scp "setup-${_controller}.sh" "${_ip}":~/ && ssh "${_ip}" bash "setup-${_controller}.sh"
-    ssh "${_ip}" rm "setup-${_controller}.sh"
+    scp "setup-${_controller}.sh" "${_ip}":~/ && ssh "${_ip}" "bash setup-${_controller}.sh && rm setup-${_controller}.sh"
     rm "setup-${_controller}.sh"
 done
 setup_load_balancer "${load_balancer}"

@@ -205,15 +205,14 @@ EOFF
 }
 
 ORIGINAL_IFS=$IFS
-IFS=" " read -r -a _worker_names <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a _worker_names <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | xargs)"
 for i in "${!_worker_names[@]}"; do
     _worker="${_worker_names[i]}"
     make_setup_script "setup-${_worker}.sh" "${_worker}"
-    scp "setup-${_worker}.sh" "${_worker}":~/ && ssh "${_worker}" bash "setup-${_worker}.sh"
-    ssh "${_worker}" rm "setup-${_worker}.sh"
+    scp "setup-${_worker}.sh" "${_worker}":~/ && ssh "${_worker}" "bash setup-${_worker}.sh && rm setup-${_worker}.sh"
     rm "setup-${_worker}.sh"
 done
 IFS=$ORIGINAL_IFS
-sleep 5
+sleep 10
 a_controller="$(cat "${_ETC_HOSTS}" | grep controller | tail -1 | awk '{ print $1 }')"
 ssh "${a_controller}" "kubectl get nodes"

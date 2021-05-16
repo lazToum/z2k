@@ -79,16 +79,15 @@ EOFF
 
 }
 ORIGINAL_IFS=$IFS
-IFS=" " read -r -a _controller_names <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a _controller_names <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $2}' | xargs)"
 IFS=" " read -r -a _controller_ips <<< "$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $1}' | xargs)"
-initial_cluster="$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $3"=https://"$1":2380"}' | xargs | sed -e "s/[[:space:]]/,/g")"
+initial_cluster="$(cat "${_ETC_HOSTS}" | grep controller | awk '{print $2"=https://"$1":2380"}' | xargs | sed -e "s/[[:space:]]/,/g")"
 for i in "${!_controller_names[@]}"; do
     _controller="${_controller_names[$i]}"
     _ip="${_controller_ips[$i]}"
     make_setup_script "etcd-${_controller}.sh" "${_ip}" "${initial_cluster}"
     # shellcheck disable=SC2029
-    scp "etcd-${_controller}.sh" "${_ip}":~/ && ssh "${_ip}" bash "etcd-${_controller}.sh"
-    ssh "${_ip}" rm "etcd-${_controller}.sh"
+    scp "etcd-${_controller}.sh" "${_ip}":~/ && ssh "${_ip}" "bash etcd-${_controller}.sh && rm etcd-${_controller}.sh"
     rm "etcd-${_controller}.sh"
 done
 IFS=$ORIGINAL_IFS

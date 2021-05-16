@@ -162,8 +162,8 @@ function main() {
 ORIGINAL_IFS=$IFS
 rm -rf certs && mkdir -p certs && cd certs || exit 1
 ensure_command ip iproute2 iproute
-IFS=" " read -r -a CONTROLLERS <<< "$(cat "${_ETC_HOSTS}"  | grep controller | awk '{print $2}' | cut -d. -f1 | xargs)"
-IFS=" " read -r -a WORKERS <<< "$(cat "${_ETC_HOSTS}"  | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
+IFS=" " read -r -a CONTROLLERS <<< "$(cat "${_ETC_HOSTS}"  | grep controller | awk '{print $2}' | xargs)"
+IFS=" " read -r -a WORKERS <<< "$(cat "${_ETC_HOSTS}"  | grep worker | awk '{print $2}' | xargs)"
 WORKER_IPS=""
 for _w in "${WORKERS[@]}"; do
   WORKER_IPS="$(get_remote_ips "${_w}"),${WORKER_IPS}"

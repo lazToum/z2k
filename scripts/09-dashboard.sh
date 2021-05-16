@@ -119,22 +119,19 @@ sudo systemctl start kube-dashboard nginx
 sudo systemctl status kube-dashboard nginx
 EOFF
   }
-  scp lb.sh "${load_balancer}":~/ && ssh "${load_balancer}" bash lb.sh
-  ssh "${load_balancer}" rm lb.sh
+  scp lb.sh "${load_balancer}":~/ && ssh "${load_balancer}" "bash lb.sh && rm lb.sh"
   rm lb.sh
 
   if [ ! "${_domain_name}" = "localhost" ] && [ ! "${_domain_name}" = "" ]; then
     make_certbot
-    scp certbot.sh "${load_balancer}":~/ && ssh "${load_balancer}" bash certbot.sh
-    ssh "${load_balancer}" rm certbot.sh
+    scp certbot.sh "${load_balancer}":~/ && ssh "${load_balancer}" "bash certbot.sh && rm certbot.sh"
     rm certbot.sh
   fi
-  _dashboard_token="$(ssh -o StrictHostKeyChecking=no load-balancer cat .dashboard_token)"
-  ssh "${load_balancer}" rm .dashboard_token
+  _dashboard_token="$(ssh -o StrictHostKeyChecking=no "${load_balancer}" "cat .dashboard_token && rm .dashboard_token")"
 
   echo "you might be able to login on \"https://${_domain_name}:${DASHBOARD_LB_PORT}\""
   echo "using the token:"
   echo "${_dashboard_token}" > .dashboard_token
   echo "${_dashboard_token}"
-  echo "also saved here: ($(pwd)/.dashboard_token)"
+  echo "also avaialbe here: ($(pwd)/.dashboard_token)"
 fi

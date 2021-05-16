@@ -30,10 +30,12 @@ else
     { "guest" => 443, "host" => 443 },
   ]
 end
-# do not install a client, just generate a cluster
+# do not install a client, just generate the nodes
 EXCLUDE_CLIENT = ENV["EXCLUDE_CLIENT"] || "false"
-# do not generate the cluster, just create the vms
+# generate the client, but do not prepare (ssh connectivity to all nodes) or generate the cluster
 SKIP_PROVISION = ENV["SKIP_PROVISION"] || "false"
+# generate the client, prepare the deployment (ssh connectiviry to all nodes) but do not proceed with the cluster geenration
+SKIP_DEPLOYMENT = ENV["SKIP_DEPLOYMENT"] || "false"
 
 # also install the kubernetes dashboard
 INCLUDE_DASHBOARD = ENV["INCLUDE_DASHBOARD"] || "true"
@@ -216,7 +218,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         client.vm.provision "shell",
           env: PROVISION_ENV,
           path: "provision.sh",
-          args: "#{IPS_PREFIX}" + "#{CLIENT_IP_SUFFIX}",
+          args: SKIP_DEPLOYMENT.eql?("true") ? "--skip-deploy": "-",
           privileged: false,
           preserve_order: true
         end

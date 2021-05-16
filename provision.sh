@@ -8,6 +8,11 @@ function read_env() {
       set -a
       # shellcheck disable=SC1091
       . .env
+    elif [ -f .env.template ]; then
+      echo "reading defaults from .env.template"
+      set -a
+      # shellcheck disable=SC1091
+      . .env.template
     fi
     IPS_PREFIX="${IPS_PREFIX:-}"
     WORKER_NODES="${WORKER_NODES:-}"
@@ -30,20 +35,20 @@ function read_env() {
 function get_hosts_and_ips() {
     local lb_ip="${IPS_PREFIX}${LB_IP_SUFFIX}"
     local client_ip="${IPS_PREFIX}${CLIENT_IP_SUFFIX}"
-    printf "%s\tload-balancer.kubernetes.local\tload-balancer\n" "${lb_ip}" >> /tmp/hosts.tmp
+    printf "%s\tload-balancer\tload-balancer.kubernetes.local\n" "${lb_ip}" >> /tmp/hosts.tmp
     IPS=( "${lb_ip}" "${client_ip}" )
     local i=0
     while [[ $i -lt ${CONTROLLER_NODES} ]]; do
         controller_ip=${IPS_PREFIX}$(( CONTROLLERS_IP_START + i ))
         IPS+=( "${controller_ip}" )
-        printf "%s\tcontroller-%s.kubernetes.local\tcontroller-%s\n" "${controller_ip}" "${i}" "${i}" >> /tmp/hosts.tmp
+        printf "%s\tcontroller-%s\tcontroller-%s.kubernetes.local\n" "${controller_ip}" "${i}" "${i}" >> /tmp/hosts.tmp
         ((i = i + 1))
     done
     local j=0
      while [[ $j -lt ${WORKER_NODES} ]]; do
         worker_ip="${IPS_PREFIX}$(( WORKERS_IP_START + j ))"
         IPS+=( "${worker_ip}" )
-        printf "%s\tworker-%s.kubernetes.local\tworker-%s\n" "${worker_ip}" "${j}" "${j}" >> /tmp/hosts.tmp
+        printf "%s\tworker-%s\tworker-%s.kubernetes.local\n" "${worker_ip}" "${j}" "${j}" >> /tmp/hosts.tmp
         ((j = j + 1))
     done
 }
@@ -99,9 +104,8 @@ my_ssh () {
       rm /home/vagrant/.ssh/id_rsa.pub
   fi
   ssh-keygen -f /home/vagrant/.ssh/id_rsa -t rsa -q -N ''
-   _pre="$(echo "${IPS_PREFIX}" | cut -d. -f1)"
   cat > ~/.ssh/config <<EOF
-Host ${_pre}.*
+Host ${IPS_PREFIX}*
     StrictHostKeyChecking no
     UserKnownHostsFile=/dev/null
 EOF
@@ -110,25 +114,23 @@ chmod 600 ~/.ssh/config && chown vagrant ~/.ssh/config
 
 
 function main() {
-    my_ip="${1:-}"
-    if [[ "${my_ip}" = "" ]]; then
-        exit 1
-    fi
     read_env
     if  [[ "${IPS_PREFIX}" == "" ]] ||
         [[ "${WORKER_NODES}" -lt 0 ]] ||
         [[ "${CONTROLLER_NODES}" -lt 0 ]] ||
         [[ "${CONTROLLERS_IP_START}" -lt 0 ]] ||
-        [[ "${CONTROLLERS_IP_START}" -lt 0 ]] ||
-        [[ "${LB_IP_SUFFIX}" -le 1 ]] ||
-        [[ "${CLIENT_IP_SUFFIX}" -le 1 ]] ; then
-        exit 0
+        [[ "${CONTROLLERS_IP_START}" -lt 0 ]]; then
+          echo "invalid env :("
+          exit 1
     fi
+    LB_IP_SUFFIX=$((CONTROLLERS_IP_START + CONTROLLER_NODES + WORKERS_IP_START + WORKER_NODES + 1))
+    CLIENT_IP_SUFFIX=$((LB_IP_SUFFIX + 1))
+    my_ip="$(ip --brief a | grep "${IPS_PREFIX}" | awk '{ print $3 }' | cut -d/ -f1)"
     my_ssh
     get_hosts_and_ips
     for _ip in "${IPS[@]}";do
         if [[ ! "${_ip}" = "${my_ip}" ]];then
-            # let's wait for all instances to be up in case we are running with --parallel
+            # let's wait for all instances to be up in case we are (not) running with --(no-)parallel
             n=0
             # try up to 10 times
             until [ "$n" -ge 10 ]; do
@@ -151,8 +153,10 @@ function main() {
 }
 
 
-main "${@}"
-if [ -f z2k.sh ];then
-  bash z2k.sh --skip-checks
+main
+if [ ! "${1}" = "--skip-deploy" ]; then
+  if [ -f z2k.sh ];then
+    bash z2k.sh --skip-checks
+  fi
 fi
 exit 0

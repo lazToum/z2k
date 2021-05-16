@@ -14,14 +14,14 @@ function make_config() {
   local _user; _user="${2}"
   local _server; _server="${3}"
   kubectl config set-cluster "${CLUSTER_NAME}" \
-    --certificate-authority=ca.pem \
+    --certificate-authority=../certs/ca.pem \
     --embed-certs=true \
     --server=https://${_server}:6443 \
     --kubeconfig="${_name}.kubeconfig"
 
   kubectl config set-credentials "${_user}" \
-    --client-certificate="${_name}.pem" \
-    --client-key="${_name}-key.pem" \
+    --client-certificate="../certs/${_name}.pem" \
+    --client-key="../certs/${_name}-key.pem" \
     --embed-certs=true \
     --kubeconfig="${_name}.kubeconfig"
 
@@ -59,14 +59,14 @@ function to_controllers() {
 
 function to_workers() {
   local _workers
-  IFS=" " read -r -a _workers <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
+  IFS=" " read -r -a _workers <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | xargs)"
   for _worker in "${_workers[@]}"; do
-    scp -o StrictHostKeyChecking=no ca.pem "${_worker}.kubeconfig" kube-proxy.kubeconfig "${_worker}":~/
+    scp -o StrictHostKeyChecking=no ../certs/ca.pem "${_worker}.kubeconfig" kube-proxy.kubeconfig "${_worker}":~/
   done
 }
 
 function main() {
-  IFS=" " read -r -a _workers <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | cut -d. -f1 | xargs)"
+  IFS=" " read -r -a _workers <<< "$(cat "${_ETC_HOSTS}" | grep worker | awk '{print $2}' | xargs)"
   for _worker in "${_workers[@]}"; do
     make_config "${_worker}" "system:node:${_worker}" "${LOAD_BALANCER_IP}"
   done
@@ -86,7 +86,7 @@ if [ ! -f ./certs/ca.pem ];then
   exit
 fi
 ORIGINAL_IFS=$IFS
-cd certs || exit 1
+mkdir -p ./configs && cd ./configs || exit 1
 main
 cd ..
 IFS=$ORIGINAL_IFS

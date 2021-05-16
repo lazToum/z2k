@@ -31,11 +31,10 @@ A two controllers and two workers deployment result:
 - [./scripts/05-controllers.sh](./scripts/05-controllers.sh)
 - [./scripts/06-workers.sh](./scripts/06-workers.sh)
 - [./scripts/07-net.sh](./scripts/07-net.sh)
-- [./scripts/08-smoke_tests.sh](./scripts/08-smoke_tests.sh) # N/A yet
+- [./scripts/08-smoke_tests.sh](./scripts/08-smoke_tests.sh)
 - [./scripts/09-dashboard.sh](./scripts/09-dashboard.sh)
 
-
-## Requirements:
+## Requirements
 
 - [Vagrant](https://www.vagrantup.com/)
 - [vagrant-libvirt](https://github.com/vagrant-libvirt/vagrant-libvirt)
@@ -43,15 +42,19 @@ A two controllers and two workers deployment result:
 ### All in one deployment
 
 - Generate 2 controllers, 2 workers, 1 load-balancer and 1 client to generate the cluster:
- ```bash 
+
+ ```bash
  vagrant up --provider=libvirt --no-parallel`
+
 ```
+
 - Just generate vms (controllers, workers, load-balancer), in order to manually create the cluster:
+
  ```bash
 EXCLUDE_CLIENT=true vagrant up --provider=libvirt --no-parallel
- ``` 
+ ```
+
 - Modify if needed [./.env.template](./.env.template) (either as env vars, or `cp .env.template .env`):
   - the number of controllers and workers
   - skip vagrant's provision step (manually generate the cluster using the [./scripts](./scripts))
   - ...
- 
