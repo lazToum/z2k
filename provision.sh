@@ -3,6 +3,12 @@
 set -e
 
 function read_env() {
+    if [ -f .env ]; then
+      echo "reading from .env"
+      set -a
+      # shellcheck disable=SC1091
+      . .env
+    fi
     IPS_PREFIX="${IPS_PREFIX:-}"
     WORKER_NODES="${WORKER_NODES:-}"
     CONTROLLER_NODES="${CONTROLLER_NODES:-}"
@@ -12,9 +18,13 @@ function read_env() {
     WORKERS_IP_START="${WORKERS_IP_START:-}"
     export DOMAIN_NAME="${DOMAIN_NAME:-localhost}"
     export INCLUDE_DASHBOARD="${INCLUDE_DASHBOARD:-false}"
+    export DASHBOARD_FORWARDED_PORT="${DASHBOARD_FORWARDED_PORT:-8888}"
+    export DASHBOARD_LB_PORT="${DASHBOARD_LB_PORT:-443}"
     if [ ! "${DOMAIN_NAME}" = "localhost" ]; then
         export FQDN="${DOMAIN_NAME}"
     fi
+    # we are in a vagrant vm, keep the default path
+    export ETC_HOSTS=/etc/hosts
 }
 
 function get_hosts_and_ips() {
@@ -42,11 +52,14 @@ function install_ssh_pass() {
     if command -v apt &> /dev/null; then
         sudo apt update && sudo apt install sshpass -y
     elif command -v dnf &> /dev/null; then
-        sudo dnf install sshpass -y
-    elif command -v yum &> /dev/null; then
-        sudo yum install sshpass -y
+        # centos
+        if [ ! "$(hostnamectl | grep centos 2>/dev/null || echo "no")" = "no" ];then
+            sudo yum  -y install epel-release && sudo yum --enablerepo=epel -y install sshpass
+        else
+            # fedora?
+            sudo dnf install sshpass -y
+        fi
     fi
-
 }
 
 function copy_my_id() {
@@ -57,8 +70,25 @@ function copy_my_id() {
         echo "no sshpass :("
         exit 1
     fi
+    cat > script.sh <<EOF
+sudo sed -i -E 's/^#?PasswordAuthentication yes.*/PasswordAuthentication no/g' /etc/ssh/sshd_config
+if command -v systemctl &> /dev/null; then
+    if command -v apt &> /dev/null; then
+        sudo systemctl restart ssh
+    else
+        sudo systemctl restart sshd
+    fi
+elif [ -f /etc/init.d/ssh ]; then
+    sudo /etc/init.d/ssh restart
+else
+    sudo kill -HUP \$(cat /var/run/sshd.pid)
+fi
+EOF
     sshpass -p 'vagrant' ssh-copy-id "vagrant@${1}"
-    ssh "vagrant@${1}" "sudo sed -i -E 's/^#?PasswordAuthentication yes.*/PasswordAuthentication no/g' /etc/ssh/sshd_config && if command -v systemctl &> /dev/null; then sudo systemctl restart ssh; elif [ -f /etc/init.d/ssh ]; then sudo /etc/init.d/ssh restart; else sudo kill -HUP \$(cat /var/run/sshd.pid);fi"
+    scp script.sh "vagrant@${1}:~/"
+    ssh "vagrant@${1}" bash script.sh
+    ssh "vagrant@${1}" rm script.sh
+    rm script.sh
 }
 
 my_ssh () {
@@ -75,6 +105,7 @@ Host ${_pre}.*
     StrictHostKeyChecking no
     UserKnownHostsFile=/dev/null
 EOF
+chmod 600 ~/.ssh/config && chown vagrant ~/.ssh/config
 }
 
 
@@ -97,7 +128,7 @@ function main() {
     get_hosts_and_ips
     for _ip in "${IPS[@]}";do
         if [[ ! "${_ip}" = "${my_ip}" ]];then
-            # if we are running with --parallel, we wait for all instances to be up
+            # let's wait for all instances to be up in case we are running with --parallel
             n=0
             # try up to 10 times
             until [ "$n" -ge 10 ]; do
@@ -119,23 +150,9 @@ function main() {
     printf "\n\n\n"
 }
 
-if [ -f .env ]; then
-    echo "reading from .env"
-    set -a
-    # shellcheck disable=SC1091
-    . .env
-    # we are in a vagrant vm, keep the default path
-    export ETC_HOSTS=/etc/hosts
-fi
+
 main "${@}"
-ORIGINAL_IFS=$IFS
-if [ -d scripts/ ];then
-    # bash scripts/01-tools.sh
-    # bash scripts/02-certificates.sh
-    IFS=" " read -r -a _scripts <<< "$(find scripts/* -maxdepth 1 -print0 | sort -z | xargs --null)"
-    for _script in "${_scripts[@]}"; do
-        bash "${_script}"
-    done
+if [ -f z2k.sh ];then
+  bash z2k.sh --skip-checks
 fi
-IFS=$ORIGINAL_IFS
 exit 0

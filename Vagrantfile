@@ -3,14 +3,6 @@
 
 CONTROLLER_NODES = Integer(ENV['CONTROLLER_NODES'] || 2)
 WORKER_NODES = Integer(ENV['WORKER_NODES'] || 2)
-
-# change them to < 1024 ?
-# in libvirt 80 && 443 are working (we are asked for sudo password on "up")
-# TODO: if othe ports are used, pass them to the load-blanacer so that it 'listens' to them
-LB_PORTS = [
-  { "guest" => 80, "host" => 80 },
-  { "guest" => 443, "host" => 443 },
-]
 ## resources
 # total: MASTER_NODES + WORKER_NODES + LOAD_BALANCER + CLIENT
 # do math for resources
@@ -23,26 +15,45 @@ CLIENT_MEMORY = Integer(ENV["CLIENT_MEMORY"] || 512)
 LB_CPUS = Integer(ENV["LB_CPUS"] || 1)
 LB_MEMORY = Integer(ENV["LB_MEMORY"] || 512)
 
+# change ports to > 1024 on virtualbox (and use iptables) ?
+# with libvirt, 80 && 443 are working (we are asked for sudo password on "vagrant up")
+HOST_PORTS_STR=ENV['HOST_PORTS'] || '80,443'
+GUEST_PORTS_STR=ENV['GUEST_PORTS'] || '80,443'
+HOST_PORTS = HOST_PORTS_STR.split(',')
+GUEST_PORTS = GUEST_PORTS_STR.split(',')
+if HOST_PORTS.length.eql?(GUEST_PORTS.length)
+  LB_PORTS = HOST_PORTS.map.with_index { |port, i| { "host" => Integer(port), "guest" => Integer(GUEST_PORTS[i]) } }
+else
+  # default to 80,443
+  LB_PORTS = [
+    { "guest" => 80, "host" => 80 },
+    { "guest" => 443, "host" => 443 },
+  ]
+end
+# do not install a client, just generate a cluster
 EXCLUDE_CLIENT = ENV["EXCLUDE_CLIENT"] || "false"
+# do not generate the cluster, just create the vms
 SKIP_PROVISION = ENV["SKIP_PROVISION"] || "false"
-INCLUDE_DASHBOARD = ENV["INCLUDE_DASHBOARD"] || "true"
 
-## ips
+# also install the kubernetes dashboard
+INCLUDE_DASHBOARD = ENV["INCLUDE_DASHBOARD"] || "true"
+DASHBOARD_FORWARDED_PORT = Integer(ENV['DASHBOARD_FORWARDED_PORT'] || "8888")
+DASHBOARD_LB_PORT = Integer(ENV['DASHBOARD_LB_PORT'] || "443")
+## network
 IPS_PREFIX = ENV["IPS_PREFIX"] || "172.16.0."
 NETMASK = ENV["NETMASK"] || "255.255.255.0"
 CONTROLLERS_IP_START = Integer(ENV["CONTROLLERS_IP_START"] || 10)
 WORKERS_IP_START = Integer(ENV["WORKERS_IP_START"] || 20)
-
 LB_IP_SUFFIX = CONTROLLERS_IP_START + CONTROLLER_NODES + WORKERS_IP_START + WORKER_NODES + 1
 CLIENT_IP_SUFFIX = LB_IP_SUFFIX + 1
 
-## if not localhost, we can get a certbot cert on lb
+## if not localhost, and install the dashboard
+# we can get a certbot cert on lb
 DOMAIN_NAME = ENV["DOMAIN_NAME"] || "localhost"
 
 ## images
 LIBVIRT_IMAGE = ENV["LIBVIRT_IMAGE"] || "generic/ubuntu2004"
 VBOX_IMAGE = ENV["VBOX_IMAGE"] || "ubuntu/focal64"
-
 # env vars to pass to machines
 PROVISION_ENV = {
   "CONTROLLER_NODES" => CONTROLLER_NODES,
@@ -53,9 +64,12 @@ PROVISION_ENV = {
   "CONTROLLERS_IP_START" => CONTROLLERS_IP_START,
   "WORKERS_IP_START" => WORKERS_IP_START,
   "DOMAIN_NAME" => DOMAIN_NAME,
-  "INCLUDE_DASHBOARD" => INCLUDE_DASHBOARD
+  "INCLUDE_DASHBOARD" => INCLUDE_DASHBOARD,
+  "DASHBOARD_FORWARDED_PORT" => DASHBOARD_FORWARDED_PORT,
+  "DASHBOARD_LB_PORT" => DASHBOARD_LB_PORT,
 }
 
+# ssh provision
 $before = <<SHELL
   sudo sed -i -E 's/^#?PasswordAuthentication no.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
   if [ -f /home/vagrant/.ssh/id_rsa ]; then 
@@ -65,13 +79,18 @@ $before = <<SHELL
       rm /home/vagrant/.ssh/id_rsa.pub
   fi
   ssh-keygen -f /home/vagrant/.ssh/id_rsa -t rsa -q -N ''
-  cat > ~/.ssh/config <<EOF
+  cat > /home/vagrant/.ssh/config <<EOF
 Host #{IPS_PREFIX}*
   StrictHostKeyChecking no
   UserKnownHostsFile=/dev/null
 EOF
+chmod 600 /home/vagrant/.ssh/config && chown vagrant /home/vagrant/.ssh/config
 if command -v systemctl  &> /dev/null; then
-  sudo systemctl restart ssh
+  if command -v apt &> /dev/null; then
+    sudo systemctl restart ssh
+  else
+    sudo systemctl restart sshd
+  fi
 elif [ -f /etc/init.d/ssh ]; then
   sudo /etc/init.d/ssh restart
 else
@@ -79,8 +98,10 @@ else
 fi
 SHELL
 
+# retrieve the insecure public key
 PUBLIC_KEY = %x[ssh-keygen -y -f ~/.vagrant.d/insecure_private_key | tr -d '\n' ]
 
+# start vagrant config
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
@@ -95,6 +116,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vbguest.auto_update = true
   end
 
+  # no need to use /vagrant
   config.vm.synced_folder ".", "/vagrant", disabled: true
 
   # libvirt
@@ -187,9 +209,13 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
           source: "scripts/",
           destination: "/home/vagrant/",
           preserve_order: true
+        client.vm.provision "file",
+          source: "z2k.sh",
+          destination: "/home/vagrant/z2k.sh",
+          preserve_order: true
         client.vm.provision "shell",
           env: PROVISION_ENV,
-          path: "vagrant.sh",
+          path: "provision.sh",
           args: "#{IPS_PREFIX}" + "#{CLIENT_IP_SUFFIX}",
           privileged: false,
           preserve_order: true

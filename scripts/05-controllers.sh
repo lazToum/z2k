@@ -161,10 +161,20 @@ server {
 }
 EOF
 sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+# TODO: selinux
+# sudo setsebool -P httpd_can_network_connect on
+# sudo chcon -Rt httpd_sys_content_t /etc/nginx/sites-enabled
+# sudo chcon -Rt httpd_sys_content_t /etc/nginx/sites-available
 sudo mv kubernetes.default.svc.cluster.local \
     /etc/nginx/sites-available/kubernetes.default.svc.cluster.local
 
 sudo ln -s /etc/nginx/sites-available/kubernetes.default.svc.cluster.local /etc/nginx/sites-enabled/
+if [ "\$(grep -i sites-enabled /etc/nginx/nginx.conf &>/dev/null || echo "no")" = "no" ];then
+  c="\$(cat /etc/nginx/nginx.conf)"
+  c="\${c%\}*}include /etc/nginx/sites-enabled/*;"$'\n'"}"
+  echo "\${c}" | sudo tee /etc/nginx/nginx.conf
+fi
+sudo nginx -t
 sudo systemctl restart nginx
 sudo systemctl enable nginx
 kubectl cluster-info --kubeconfig admin.kubeconfig
